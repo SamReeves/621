@@ -1,0 +1,20 @@
+---
+title: "notesw4"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Ch3 AMARR Diagnostics and Transformations for Simple Linear Regression
+
+
+Generally, we assume:
+
+\[E(|X=x)=\beta_0 + \beta_1x \text{ and Var}(Y|X=x)=\sigma^2\]
+
+
+# Ch 6 Linear Models with R
+
+# Ch 9

@@ -1,0 +1,226 @@
+---
+title: "notes w2"
+author: "Sam Reeves"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# A Modern Approach to regression with R Ch 2.1
+
+\[Y_i 
+  = E(Y|X=x) + \epsilon_i 
+  = \beta_0 + \beta_1 x + \epsilon_i\]
+
+where $\epsilon_i$ is the random error in $Y_i$ and is such that $E(\epsilon | X) = 0$.
+
+We assume that:
+
+\[Var(Y|X=x) = \sigma^2\]
+
+In practice, we wish to minimize the difference between the actual value of $y(y_i)$ and the predicted value of $y(\hat{y_i})$.  This difference is called the residual, $\hat{\epsilon_i}$, that is:
+
+\[\hat{\epsilon_i} = y_i - \hat{y_i}\]
+
+A very popular method of choosing b 0 and b 1 is called the method of least squares. As the name suggests b 0 and b 1 are chosen to minimize the sum of squared residuals (or residual sum of squares [RSS]),
+
+\[\text{RSS}
+  = \sum^n_{i=1} \hat{\epsilon_i}^2
+  = \sum^n_{i=1} (y_i - \beta_0 - \beta_1 x_i)^2\]
+
+For a minimum we require:
+
+\[\frac{\partial \text{RSS}}{\partial \beta_0}
+  = -2 \sum^n_{i=1} (y_i - \beta_0 - \beta_1x_i)
+  = 0\]
+  
+and
+
+\[\frac{\partial \text{RSS}}{\partial \beta_1}
+  = -2 \sum^n_{i=1} x_i (y_i - \beta_0 - \beta_1x_i)
+  = 0\].
+  
+Simplifying, we get:
+
+\[\sum^n_{i=1} y_i
+  = \beta_0 n + \beta_1 \sum^n_{i=1} x_i\]
+  
+and
+
+\[\sum^n_{i=1} x_i y_i 
+  = \beta_0 \sum^n_{i=1} x_i + \beta_1 \sum^n_{i=1} x_i^2\].
+  
+These last two equations are called normal equations. Solving these equations for $\beta_0$ and $\beta_1$ gives the soc-called least squares estimates of the intercept:
+
+\[\hat{\beta_0} = \bar{y} - \hat{\beta_1} \bar{x}\]
+
+and the slope:
+
+\[\hat{\beta_1}
+  = \frac{\sum^{n}_{i=1} x_i y_i - n\bar{xy}}
+         {\sum^n_{i=1} x_i^2 - n \bar{x}^2}
+  = \frac{\sum^n_{i=1} (x_i - \bar{x}) (y_i - \bar{y})}
+         {\sum^n_{i=1} (x_i - \bar{x})^2}
+  = \frac{SXY}{SXX}\] .
+
+
+---
+
+Consider the linear regression model with constant variance:
+
+\[Y_i = \beta_0 + \beta1 x_i + \epsilon_i  (i= 1,2,...,n)\]
+
+where the random error $\epsilon_i$ has amean 0 variance $\sigma^2$.  We wish to estimate $\sigma^2 = Var(\epsilon)$... Notice that:
+
+\[\epsilon_i = Y_i - (\beta_0 + \beta_1 x_i) = Y - ? x_i\]
+
+The residuals in practice can be used to estimate $\sigma^2$.
+
+\[S^2 = \frac{\text{RSS}}{n-2}
+  = \frac{1}{n-2} \sum^n_{i=1} \hat{e_i}^2\]
+  
+
+# Linear Models with R Ch 2
+
+# Estimation
+
+A linear model:
+
+\[Y = f(X_1, X_2, X_3) + \epsilon\]
+\[= \beta_0 + \beta_1 X_1 + \beta_2 X_2 + \epsilon\]
+
+### Matrix Representation
+
+We start with some data where we have a response Y and, say, three predictors, $X_1, X_2, \text{and} X_3$. The data might br presented in tabular form like this:
+
+\[\begin{matrix}
+    y_1 & x_{11} & x_{12} & x_{13} \\
+    y_2 & x_{21} & x_{22} & x_{23} \\
+    ... & & ... & \\
+    y_n & x_{n1} & x_{n2} & x_{n3}
+    \end{matrix}\]
+    
+where n is the number of observations or cases in the dataset.
+
+\[y_i = \beta_0 + \beta_1 x_{i1} + \beta_1 x_{i2} + \beta_1 x_{i3} + \epsilon_i
+  i = 1,2,...,n\].
+  
+\[y = X\beta + \epsilon\]
+
+where $y = (y_1, y_2, ... , y_n)^T$, $\epsilon = (\epsilon_1, \epsilon_2, ... , \epsilon_n)^T$, $\beta = ()\beta_0, \beta_1, ..., \beta_n)^T$ and:
+
+\[X = \begin{pmatrix}
+        1 & x_{11} & x_{12} & x_{13} \\
+        1 & x_{21} & x_{22} & x_{23} \\
+        ... &  & ... &  \\
+        1 & x_{n1} & x_{n2} & x_{n3} \\
+  \end{pmatrix}\]
+
+
+  
+A simple model is the null model where there is no predictor and just a mean $y = \mu + \epsilon$:
+
+
+\[\begin{pmatrix} y1 \\ ... \\ y_n \\ \end{pmatrix}
+  = \begin{pmatrix} 1 \\ ... \\ 1 \\  \end{pmatrix} \mu
+  + \begin{pmatrix} \epsilon_11 \\ ... \\ \epsilon_n \\ \end{pmatrix}\]
+    
+
+### Least Squares
+
+\[\sum \epsilon_i^2 = \epsilon^T \epsilon = (y - X \beta)^T(y - X \beta)\]
+
+Differentiating with respect to $\beta$ and setting to sero, we find $\hat{\beta}$:
+
+\[X^T X \hat{\beta} = X^T y\]
+
+These are normal equations... We can derive the same result using the geometrix approach.  Now provided $X^T X$ is invertible:
+
+\[\hat{\beta} = (X^T X)^{-1} X^T y\]
+\[X \hat{\beta} = X (X^T X)^{-1} X^T y\]
+\[\hat{y} = H y\]
+
+\[H = X (X^T X)^{-1} X^T \text{ is called the hat matrix.}\]
+
+The hat matrix is the orthogonal projection of y onto the space spanned by X.  H is useful for theoretical manipulations, but you usually do not want to computer it explicitly, as it is an $n \times n$ matrix which could be uncomfortably large for some datasets.
+
+The following useful quantities can now be used represented using H:
+
+\[\hat{y} = H y = X \hat{\beta}\]
+\[\hat{\epsilon} = y - X \hat{\beta} = y - \hat{y} = (I - H)y\]
+
+RSS:
+
+\[\hat{\epsilon}^T \hat{\epsilon} = y^T (I - H)^T (I - H) y
+  = y^T (I - H) y\]
+
+Later we show that the least swuares estimate is the best possible estimate of $\beta$ when the errors $\epsilon$ are uncorrelated and have equal variance, i.e., $Var (\epsilon) = \sigma^2 I$.  $\hat{\beta}$ is a vector, its variance is a matrix.
+
+\[\hat{\sigma}^2 = \frac{\hat{\epsilon}^T \hat{\epsilon}}{n - p}
+  = \frac{\text{RSS}}{n - p}\]
+  
+n - p is degrees of freedom of the model.
+
+\[se(\hat{\beta}_{i-1}) = \sqrt{(X^T X)_{ii}^{-1}} \hat{\sigma}\]
+
+
+### Calculating $\beta$
+
+```{r}
+library(faraway)
+data(gala, package = 'faraway')
+
+head(gala[,-2])
+```
+
+```{r}
+lmod <- lm(Species ~ Area + Elevation + Nearest + Scruz + Adjacent, data = gala)
+sumary(lmod)
+```
+\[(X^T X)^{-1} X^T y\]
+
+```{r}
+x <- model.matrix( ~ Area + Elevation + Nearest + Scruz + Adjacent, data = gala)
+y <- gala$Species
+
+xtxi <- solve(t(x) %*% x)
+xtxi %*% t(x) %*% y
+```
+
+orrrr
+
+```{r}
+solve(crossprod(x,x), crossprod(x,y))
+```
+
+We can estimate $\sigma^2$ or pull it from sumary:
+
+```{r}
+lmodsum <- sumary(lmod)
+
+sqrt(deviance(lmod) / df.residual(lmod))
+
+lmodsum$sigma
+```
+```{r}
+xtxi <- lmodsum$cov.unscaled
+
+sqrt(diag(xtxi)) * lmodsum$sigma
+
+lmodsum$coef[,2]
+```
+
+### QR Decomposition
+
+Any design matrix X can be written as:
+
+\[X = Q \begin{pmatrix} R \\ 0 \end{pmatrix} = Q_f R\]
+
+Where $Q$ is an $n \times n$ orthoganal matrix.  $Q^T Q = Q Q^T = I$ and $R$ is a $p \times p$ upper triangular matrix.  $0$ is an $(n - p) \times p$ matrix of zeroes while $Q_f$ is the first $p$ columns of $Q$.
+
+\[RSS = || Q^T y - Q^T X \beta ||^2 = begin{pmatrix} f \\ r \end{pmatrix} - \begin{pmatrix} \end{pmatrix}\]
+
+
+

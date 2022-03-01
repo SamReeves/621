@@ -1,0 +1,296 @@
+---
+title: "Week 1 Homework 621"
+author: "Sam Reeves"
+date: "1/31/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Exercises
+
+# 1.1
+
+The dataset teengamb concerns a study of teenage gambling in Britain. Make a numerical and graphical summary of the data, commenting on any features that you find interesting. Limit the output you present to a quantity that a busy reader would find sufficient to get a basic understanding of the data.
+
+```{r}
+data(teengamb, package = 'faraway')
+
+(teengamb$sex <- factor(teengamb$sex))
+levels(teengamb$sex) <- c('male', 'female')
+
+head(teengamb)
+summary(teengamb)
+
+anyNA(teengamb)
+```
+
+"The teengamb data frame has 47 rows and 5 columns. A survey was conducted to study teenage gambling in Britain."  There appear to be no null values.
+
+```{r}
+par(mfrow = c(2,2))
+hist(teengamb$verbal, main = '', xlab = 'verbal')
+hist(teengamb$income, main = '', xlab = 'income')
+plot(density(teengamb$verbal), main = 'verbal')
+plot(density(teengamb$income), main = 'income')
+```
+
+```{r}
+par(mfrow = c(1, 2))
+plot(gamble ~ income, teengamb)
+plot(gamble ~ sex, teengamb)
+```
+
+So it seems there are some outliers who make a lot of money and gamble a lot, but it seems that the gamblers are concentrated on the low end of the income spectrum.  Men also have a much more prevalent gambling problem than women in the set surveyed.
+
+Out of 2 very rich people represented, one has the biggest gambling habit, and he is male.  The median income is fairly low and the spread of verbal scores is centered around 7
+
+
+```{r}
+par(mfrow = c(1, 2))
+plot(verbal ~ income, teengamb)
+plot(verbal ~ gamble, teengamb)
+```
+```{r}
+ggplot(teengamb,aes(x=log(income), y = log(gamble), col = sex)) +
+  geom_point()
+
+ggplot(teengamb,aes(x=log(verbal), y = log(gamble), col = sex)) +
+  geom_point()
+```
+
+
+Let's try to fit a model of gambling habits as explained by income and verbal score, adjusted for sex.
+
+```{r}
+lm.inc <- lm(gamble ~ income + sex, teengamb)
+lm.verb <- lm(gamble ~ verbal + sex, teengamb)
+```
+
+```{r}
+par(mfrow = c(2,2))
+plot(lm.inc)
+```
+
+There is a very strong relationship between income and gambling habits, adjusted for sex.
+
+```{r}
+par(mfrow= c(2,2))
+plot(lm.verb)
+```
+Verbal score as a predictor of gambling habits after adjustment for sex, is not as strong an explanatory variable.  Still, I would include it in my model.
+
+# 1.3
+
+The dataset prostate is from a study on 97 men with prostate cancer who were due to receive a radical prostatectomy. Make a numerical and graphical summary of the data as in the first question.
+
+```{r}
+data(prostate, package = 'faraway')
+
+head(prostate)
+summary(prostate)
+
+anyNA(prostate)
+```
+
+
+```{r}
+par(mfrow = c(3,2),
+    mar = c(4, 4, 0.1, 0.1))
+hist(prostate$age, xlab = 'age', main = '')
+hist(prostate$lweight, xlab = 'lweight', main = '')
+hist(prostate$lcavol, xlab = 'lcavol', main = '')
+
+hist(prostate$lbph, xlab = 'lbph', main = '')
+hist(prostate$lcp, xlab = 'lcp', main = '')
+hist(prostate$lpsa, xlab = 'lpsa', main = '')
+```
+
+So.. the Gleason Cancer Score is probably what we would like to predict...
+
+lcavol and lweight are logs of cancer volume and weight, respectively.  We could perhaps try to find a predictor formula for these, too.
+
+```{r}
+pairs(prostate[,c('age', 'lbph', 'svi', 'lcp', 'lpsa')])
+
+ggplot(prostate, aes(x=lcavol, y = lweight, col = gleason)) +
+  geom_point()
+```
+
+Realistically, we should try to find a model with clinically identified inputs.  We can take predictors age, lbph, svi, lcp, and lpsa for gleason.  These are the age, log(benign prostatic hyperplasia amount), seminal vesicle invasion, log(capsular penetration), and log(prostate specific antigen).
+
+```{r}
+lm.gle <- lm(gleason ~ age + lbph + svi + lcp + lpsa, prostate)
+
+summary(lm.gle)
+plot(lm.gle)
+```
+This is not a terrible fit...
+
+# 1.4
+
+The dataset sat comes from a study entitled “Getting What You Pay For: The Debate Over Equity in Public School Expenditures.” Make a numerical and graphical summary of the data as in the first question.
+
+```{r}
+data(sat, package = 'faraway')
+
+head(sat)
+summary(sat)
+
+anyNA(sat)
+```
+The sat data frame has 50 rows and 7 columns. Data were collected to study the relationship between expenditures on public education and test results. 
+
+
+expend -- Current expenditure per pupil in average daily attendance in public elementary and secondary schools, 1994-95 (in thousands of dollars)
+    
+ratio -- Average pupil/teacher ratio in public elementary and secondary schools, Fall 1994
+    
+salary -- Estimated average annual salary of teachers in public elementary and secondary schools, 1994-95 (in thousands of dollars)
+    
+takers -- Percentage of all eligible students taking the SAT, 1994-95
+
+verbal -- Average verbal SAT score, 1994-95
+
+math -- Average math SAT score, 1994-95
+
+total -- Average total score on the SAT, 1994-95
+
+```{r}
+par(mfrow = c(3, 2),
+    mar = c(4, 4, 0.1, 0.1))
+
+hist(sat$expend, main = '', ylab = '', xlab = 'expend')
+hist(sat$ratio, main = '', ylab = '', xlab = 'ratio')
+hist(sat$salary, main = '', ylab = '', xlab = 'salary')
+hist(sat$takers, main = '', ylab = '', xlab = 'takers')
+hist(sat$verbal, main = '', ylab = '', xlab = 'verbal')
+hist(sat$math, main = '', ylab = '', xlab = 'math')
+```
+Math and verbal scores and the number of test takers are all bimodal, and they appear strongly correlated. Expenditures and tecaher/pupil ratio appear skewed in the same way with salary.
+
+We should be trying to predict the math and verbal scores using the other features as inputs.  If a model is readily obvious, there is a strong case to be made for the efficacy of education expenditures on math and verbal SAT scores, for this population during this time period.
+
+```{r}
+lm.math <- lm(math ~ expend + ratio + salary + takers, sat)
+lm.verbal <- lm(verbal ~ expend + ratio + salary + takers, sat)
+```
+
+```{r}
+summary(lm.math)
+par(mfrow = c(2, 2),
+    mar = c(4, 4, 1, 1))
+plot(lm.math)
+
+summary(lm.verbal)
+par(mfrow = c(2, 2),
+    mar = c(4, 4, 1, 1))
+plot(lm.verbal)
+```
+Apparently, the observations are labeled by state, and New Hampshire, Utah, and West Virginia are extreme model-influencing outliers.  All the rest of the residuals seem appropriate for out model.
+
+
+# 1.5
+
+The dataset divusa contains data on divorces in the United States from 1920 to 1996. Make a numerical and graphical summary of the data as in the first question.
+
+```{r}
+data(divusa, package = 'faraway')
+
+head(divusa)
+summary(divusa)
+
+anyNA(divusa)
+```
+The seven variables are year (1920 - 1996), divorce per 1000 women aged 15 or more, unemployment rate, percent female participation in labor force aged 16+, births per 1000 women age 15-44, military personnel per 1000 population.
+
+These are some interesting inputs.  I guess that the interesting thing would be to predict divorce rates and birthrates from the other features.  All of the data is numerical.
+
+```{r}
+par(mfrow = c(3, 2),
+    mar = c(4, 4, 0.1, 0.1))
+
+hist(divusa$divorce, main = '', ylab = '', xlab = 'divorce')
+hist(divusa$unemployed, main = '', ylab = '', xlab = 'unemployed')
+hist(divusa$femlab, main = '', ylab = '', xlab = 'femlab')
+hist(divusa$marriage, main = '', ylab = '', xlab = 'marriage')
+hist(divusa$birth, main = '', ylab = '', xlab = 'birth')
+hist(divusa$military, main = '', ylab = '', xlab = 'military')
+```
+
+It looks like the data cross 3 periods of relatively high female involvement in the workforce, or that there were two major movements to increase involvement over the course of the observations.  It seems like unemployment hovered around 5% or 6% for most of the timespan.  Marriage is normally distributed, but skewed a bit to the right.  Military personnel is an exponential distrbution with a couple periods of extremely high involvement... Maybe this is the Vietnam War and WWII? The birth rate appears to be a noisy uniform distribution.
+
+
+```{r}
+lm.birth <- lm(birth ~ year + unemployed +
+                 femlab + marriage + military,divusa)
+
+lm.div <- lm(divorce ~ year + unemployed +
+               femlab + marriage + military,divusa)
+```
+
+Both features are fitted against the same inputs, unaltered.
+
+```{r}
+summary(lm.birth)
+par(mfrow = c(2, 2),
+    mar = c(4, 4, 1, 1))
+plot(lm.birth)
+
+summary(lm.div)
+par(mfrow = c(2, 2),
+    mar = c(4, 4, 1, 1))
+plot(lm.div)
+```
+The errors on these are very high... Although the models do identify some trends: the marriage rate and the military ratio don't affect birthrates but unemployment and female workplace participation do strongly.  And divorce rates are very hard to predict.  It seems there is a strong trend towards divorce over time, and that marriage and female employment rates also have the strongest predictive value.
+
+---
+
+# A Modern Approach to Regression with R
+
+Generally, the linear regression model is written in matrix form as:
+
+\[Y = X \beta + \epsilon\]
+
+\[Y = \begin{pmatrix}
+          y_1 \\
+          y_2 \\
+          ... \\
+          y_n
+          \end{pmatrix}  , 
+  X = \begin{pmatrix}
+          1 & x_{11} & ... & x_{1p}\\
+          1 & x_{21} & ... & x_{2p}\\
+          ... & ... \\
+          1 & x_{n1} & ... & x_{np}
+          \end{pmatrix},
+  \beta = \begin{pmatrix}
+          \beta_0 \\
+          \beta_1 \\
+          ... \\
+          \beta_p
+          \end{pmatrix} ,
+  \epsilon = \begin{pmatrix}
+          \epsilon_1 \\
+          \epsilon_2 \\
+          ... \\
+          \epsilon_n
+          \end{pmatrix}\]
+
+
+The least squares estimates are given by:
+
+\[\hat{\beta} = (X'X)^{-1} X' Y\]
+
+We next derive the conditional mean of the least squares estimates:
+
+\[E (\hat{\beta}|X) = E \big( (X'X)^{-1} X' Y | X) \big) \]
+
+\[ = (X'X)^{-1} X' E(Y|X)\]
+
+\[ = (X' X)^{-1} X' X \beta\]
+
+\[ = \beta\]

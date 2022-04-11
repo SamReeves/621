@@ -1,0 +1,327 @@
+---
+title: "Homework 3"
+author: "Sam Reeves"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = FALSE)
+library(tidyverse)
+library(corrplot)
+library(My.stepwise)
+library(pROC)
+```
+
+# 1. Data Exploration
+
+We have been given a set of 466 observations concerning areas in a city, and each corresponds to a True or False value for the area experiencing elevated crime levels.  We have made a predictive model to categorize new areas as high crime or not high crime.
+
+
+The variable "black" is missing from the data.  I assume this is the modification indicated in the initial filenames.  This is not a problem, I would also throw this out.  Leaving out this variable could protect against dangerous side effects of an overzealous model fit.  However, without this information included, we can not actively safeguard against racist models.
+
+```{r, include = TRUE, echo = FALSE}
+vars <- c('large_zone', 'ind_acres', 'charles', 'nox', 'rooms', 'age',
+          'dist_emp', 'hw_dist', 'full_tax', 'ptratio', 'low_status',
+          'median_val', 'target')
+
+train <- read.csv('crime-training-data_modified.csv') %>%
+  tibble() %>%
+  setNames(vars)
+
+eval <- read.csv('crime-evaluation-data_modified.csv') %>%
+  tibble() %>%
+  setNames(vars)
+
+sapply(train, class)
+summary(train[, vars])
+```
+
+Combing through exploratory data analysis, it seems there are no missing values.  The information concerning large zones (large_zone) and median home value (median_val) seem quite skew in the same direction.  The other values appear to have fairly reasonable distributions.
+
+```{r, include = TRUE, echo = FALSE}
+par(mfrow = c(2,2))
+hist(as.numeric(as.character(train$large_zone)), main = '', ylab = '', axes = FALSE, xlab = 'Large Zoning')
+hist(as.numeric(as.character(train$median_val)), main = '', ylab = '', axes = FALSE, xlab = 'Median Value')
+hist(as.numeric(as.character(train$age)), main = '', ylab = '', axes = FALSE, xlab = 'Age')
+hist(as.numeric(as.character(train$full_tax)), main = '', ylab = '', axes = FALSE, xlab = 'Full Tax Value')
+
+par(mfrow = c(2,2))
+hist(as.numeric(as.character(train$low_status)), main = '', ylab = '', axes = FALSE, xlab = 'Low Status')
+hist(as.numeric(as.character(train$nox)), main = '', ylab = '', axes = FALSE, xlab = 'NOX')
+hist(as.numeric(as.character(train$ind_acres)), main = '', ylab = '', axes = FALSE, xlab = 'Industrial Acres')
+```
+
+The full value property tax data is bimodal, as are age and industrial acreage.  All of these observations stand to reason, and it looks like our dataset is pretty clean and good without alterations.  Since the dependent variable is binary, we should be looking for bimodal frequency patterns.
+
+We tried applying a log transformation to median_val, but it didn't make it through the stepwise selection process.
+
+\break
+
+Let's look at the correlations to examine some more relationships among the independents.
+
+```{r, include = TRUE, echo = FALSE}
+ct <- cor(train)
+corrplot(ct)
+```
+Here we see that the greatest correlations are among the pairs is highway-distance/full-tax-value.  Nitrogen compounds in the air correlate heavily with industrial acreage, age, and the target variable.  This stands to reason.  Distance to the Charles river and number of rooms are not particularly correlated with the target variable, and distance to employment centers, large zoning, and median value are uncorrelated to the target.
+
+# 2. Data Preparation
+
+Because full_tax and hw_dist are so highly correlated, it seemed logical to combine them. It also seemed useful to combine nox and ind_acres for the same reason.  I also added a combined low_status and dist_emp term.  Each of these pairs was multiplied together and added to the independent terms in the logistic regression.
+
+I didn't feel it was important to bin any of this data. After mutations, I converted every value to a value between 0 and 1.  I've had good success with this in the past.
+
+
+```{r}
+normalize <- function(x) {
+  xmin <- min(x)
+  xmax <- max(x)
+  return(lapply(x, function(x) (x-xmin) / (xmax-xmin)))
+}
+
+vars.trans <- c(vars, 'log_val', 'nox_ind', 'tax_dist', 'low_emp')
+
+train.trans <- train %>%
+  mutate(log_val = log(median_val)) %>%
+  mutate(nox_ind = nox * ind_acres) %>%
+  mutate(tax_dist = full_tax * hw_dist) %>%
+  mutate(low_emp = low_status * dist_emp) %>%
+  transmute_all(normalize) %>%
+  transmute_all(unlist) %>%
+  tibble() %>%
+  setNames(vars.trans)
+```
+
+\break
+
+# 3. Build Models
+
+For building the models, I used a stepwise approach.  That means, we regress each independent variable to the target, one at a time, and we throw out all variables that have a p value greater than 0.15.  Of the remaining variables, the one with the smallest p value will be added, and others progressively mixed in.
+
+We tried this first on the raw, untransformed data, and then on the transformed dataset.  The transformed data performed better.
+
+```{r}
+My.stepwise.glm(Y = 'target', variable.list = vars,
+                in.variable = 'NULL', data = train, sle = 0.15,
+                sls = 0.15, myfamily = 'binomial', myoffset = 'NULL')
+
+My.stepwise.glm(Y = 'target', variable.list = vars.trans,
+                in.variable = 'NULL', data = train.trans, sle = 0.15,
+                sls = 0.15, myfamily = 'binomial', myoffset = 'NULL')
+```
+
+```{r, include = TRUE, echo = FALSE}
+(bm <- glm(target ~ nox + hw_dist + ptratio + age + median_val + low_emp + 
+             large_zone + tax_dist + dist_emp,
+           train.trans,
+           family = 'binomial'))
+```
+
+The coefficients of this model suggest a few things.  High values for nox and distance from a highway, coupled with low values for median value, ptratio, and the combined full tax status and distance from the highway, together signal a high crime area.  There are other significant factors at play, but these are the most significant factors.  It makes sense.
+
+# 4. Select Models
+
+The two final models scored similarly in AIC.  The natural data model scored 215.32, and the transformed model scored 213.33.  It seems that standardizing the data had almost no effect, and combining full_tax and hw_dist was slightly useful.
+
+Examining the residuals, we can see that this model fits the training set extremely well.  There are two clear and separate groups that are easily distinguishable.  The residuals have relatively normal variance, and none of the outliers are beyond Cook's distance.  Our fit line accurately recognizing most points, according to the Q-Q plot, and all the values that fall off the line are extreme in a specific desired direction.
+
+```{r, include = TRUE, echo = FALSE}
+plot(bm)
+```
+
+```{r, include = TRUE, echo = FALSE}
+truth <- bm$model$target
+fit.values <- ifelse(bm$fitted.values >= 0.5, 1, 0)
+
+proc_obj <- roc(truth, fit.values,
+                smoothed = TRUE, ci = TRUE, ci.alpha = 0.9,
+                stratified = FALSE, plot = TRUE)
+sens.ci <- ci.se(proc_obj)
+
+plot(sens.ci, type="shape", col="lightblue")
+```
+
+```{r, include = TRUE, echo = FALSE}
+auc(proc_obj)
+
+(conf_matrix <- table(truth, fit.values))
+total <- 466
+
+true.neg <- conf_matrix[1,1]
+true.pos <- conf_matrix[2,2]
+false.neg <- conf_matrix[1,2]
+false.pos <- conf_matrix[2,1]
+```
+
+
+```{r, include = TRUE, echo = TRUE}
+(accuracy <- (true.pos + true.neg) / total)
+
+(class.error <- 1 - accuracy)
+
+(precision <- true.pos / (true.pos + false.pos))
+
+(sensitivity <- true.pos / (true.pos + false.neg))
+
+(specificity <- true.neg / (true.neg + false.pos))
+
+(f1 <- 2 * precision * sensitivity / (precision + sensitivity))
+```
+
+Across the board, we can see that this model is effective.  There is a chance it is overtrained, but I believe that chance is low.  I would confidently use this model to predict new values.
+
+After transforming the test set in the same way, we make these 40 predictions:
+
+```{r}
+test <- eval %>%
+  mutate(log_val = log(median_val)) %>%
+  mutate(nox_ind = nox * ind_acres) %>%
+  mutate(tax_dist = full_tax * hw_dist) %>%
+  mutate(low_emp = low_status * dist_emp) %>%
+  transmute_all(normalize) %>%
+  transmute_all(unlist) %>%
+  tibble() %>%
+  setNames(vars.trans[-13])
+```
+
+
+```{r, include = TRUE, echo = FALSE}
+pred <- predict(bm, test, type="response")
+(pred <- ifelse(pred >= 0.5, 1, 0))
+```
+\break
+
+# Appendix -- Code
+
+---
+
+```
+
+library(tidyverse)
+library(corrplot)
+library(My.stepwise)
+library(pROC)
+
+
+vars <- c('large_zone', 'ind_acres', 'charles', 'nox', 'rooms', 'age',
+          'dist_emp', 'hw_dist', 'full_tax', 'ptratio', 'low_status',
+          'median_val', 'target')
+
+train <- read.csv('crime-training-data_modified.csv') %>%
+  tibble() %>%
+  setNames(vars)
+
+eval <- read.csv('crime-evaluation-data_modified.csv') %>%
+  tibble() %>%
+  setNames(vars)
+
+sapply(train, class)
+summary(train[, vars])
+
+
+par(mfrow = c(2,2))
+hist(as.numeric(as.character(train$large_zone)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'Large Zoning')
+hist(as.numeric(as.character(train$median_val)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'Median Value')
+hist(as.numeric(as.character(train$age)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'Age')
+hist(as.numeric(as.character(train$full_tax)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'Full Tax Value')
+
+par(mfrow = c(2,2))
+hist(as.numeric(as.character(train$low_status)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'Low Status')
+hist(as.numeric(as.character(train$nox)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'NOX')
+hist(as.numeric(as.character(train$ind_acres)), 
+  main = '', ylab = '', axes = FALSE, xlab = 'Industrial Acres')
+
+
+ct <- cor(train)
+corrplot(ct)
+
+
+normalize <- function(x) {
+  xmin <- min(x)
+  xmax <- max(x)
+  return(lapply(x, function(x) (x-xmin) / (xmax-xmin)))
+}
+
+vars.trans <- c(vars, 'log_val', 'nox_ind', 'tax_dist', 'low_emp')
+
+train.trans <- train %>%
+  mutate(log_val = log(median_val)) %>%
+  mutate(nox_ind = nox * ind_acres) %>%
+  mutate(tax_dist = full_tax * hw_dist) %>%
+  mutate(low_emp = low_status * dist_emp) %>%
+  transmute_all(normalize) %>%
+  transmute_all(unlist) %>%
+  tibble() %>%
+  setNames(vars.trans)
+  
+  
+My.stepwise.glm(Y = 'target', variable.list = vars,
+                in.variable = 'NULL', data = train, sle = 0.15,
+                sls = 0.15, myfamily = 'binomial', myoffset = 'NULL')
+
+My.stepwise.glm(Y = 'target', variable.list = vars.trans,
+                in.variable = 'NULL', data = train.trans, sle = 0.15,
+                sls = 0.15, myfamily = 'binomial', myoffset = 'NULL')
+
+(bm <- glm(target ~ nox + hw_dist + ptratio + age + median_val + low_emp + 
+             large_zone + tax_dist + dist_emp,
+           train.trans,
+           family = 'binomial'))
+  
+plot(bm)
+
+
+truth <- bm$model$target
+fit.values <- ifelse(bm$fitted.values >= 0.5, 1, 0)
+
+proc_obj <- roc(truth, fit.values,
+                smoothed = TRUE, ci = TRUE, ci.alpha = 0.9,
+                stratified = FALSE, plot = TRUE)
+sens.ci <- ci.se(proc_obj)
+
+plot(sens.ci, type="shape", col="lightblue")
+
+
+auc(proc_obj)
+
+(conf_matrix <- table(truth, fit.values))
+total <- 466
+
+true.neg <- conf_matrix[1,1]
+true.pos <- conf_matrix[2,2]
+false.neg <- conf_matrix[1,2]
+false.pos <- conf_matrix[2,1]
+
+(accuracy <- (true.pos + true.neg) / total)
+
+(class.error <- 1 - accuracy)
+
+(precision <- true.pos / (true.pos + false.pos))
+
+(sensitivity <- true.pos / (true.pos + false.neg))
+
+(specificity <- true.neg / (true.neg + false.pos))
+
+(f1 <- 2 * precision * sensitivity / (precision + sensitivity))
+
+
+test <- eval %>%
+  mutate(log_val = log(median_val)) %>%
+  mutate(nox_ind = nox * ind_acres) %>%
+  mutate(tax_dist = full_tax * hw_dist) %>%
+  mutate(low_emp = low_status * dist_emp) %>%
+  transmute_all(normalize) %>%
+  transmute_all(unlist) %>%
+  tibble() %>%
+  setNames(vars.trans[-13])
+  
+pred <- predict(bm, test, type="response")
+(pred <- ifelse(pred >= 0.5, 1, 0))
+
+```

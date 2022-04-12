@@ -1,0 +1,51 @@
+---
+title: "Discussion 3"
+author: "Sam Reeves"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(faraway)
+
+data(teengamb, package = 'faraway')
+tibble(teengamb)
+```
+
+# 3.3
+
+> Using the teengamb data, fit a model with gamble as  response and the other variables as predictors.
+
+```{r}
+lmod <- lm(gamble ~ ., teengamb)
+```
+
+> (a) Which variables are statistically significant at the 5% level?
+
+```{r}
+summary(lmod)
+```
+Only income and sex!
+
+> (b) What interpretation should be given to the coefficient for sex?
+
+It has significant predictive value, however income will be a bigger deciding factor alone, and it will affect the predictive power of sex.
+
+> (c) Fit a model with just income as a predictor and use an F-test to compare it to the full model.
+
+```{r}
+lmod2 <- lm(gamble ~ income, teengamb)
+summary(lmod2)
+```
+```{r}
+curve(df(x, df1=4, df2=42), from=0, to=4, xlab = '', ylab = '', col = 'blue', main = 'F Distributions - lmod2 in black', axes=FALSE)
+par(new=TRUE)
+curve(df(x, df1=1, df2=45), from=0, to=4, xlab = '', ylab = '', axes = FALSE)
+```
+```{r}
+nullmod <- lm(gamble ~ 1, teengamb)
+anova(nullmod, lmod)
+anova(nullmod, lmod2)
+```
+The model with only income seems about a third as effective.

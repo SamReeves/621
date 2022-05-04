@@ -1,0 +1,109 @@
+---
+title: "Discussion 5"
+author: "Sam Reeves"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(faraway)
+library(Amelia)
+```
+
+# Linear Models with R 13.3
+
+The pima dataset contains information on 768 adult female Pima Indians living near Phoenix.
+
+```{r}
+head(pima <- faraway::pima %>% mutate_all(as.numeric))
+```
+
+
+>(a) The analysis in Chapter 1 sugests that zero has been used as a missing value code for several of the variables.  Replace these values with NA.  Describe the distribution of missing values in the data.
+
+```{r}
+na.zero <- c('glucose', 'diastolic', 'triceps', 'insulin', 'bmi')
+filled <- pima[na.zero]
+
+filled[filled == 0] <- NA
+pima[na.zero] <- filled
+
+image(is.na(filled),axes=FALSE,col=gray(1:0))
+axis(2, at = 1:5/5, labels=colnames(filled))
+```
+
+It seems likely that if one piece of information is missing, then another may also be missing.  All information for 'test', 'age', and 'diabetes' is present.  It seems that 'triceps', 'insulin', and 'diastolic' are the most commonly missing.
+
+
+>(b) Fit a linear model with diastolic as the response and the other variables as predictors.  Summarize the fit.
+
+```{r}
+summary(lm1 <- lm(diastolic ~ ., pima))
+```
+Looks like BMI and age have a large effect on the target variable.
+
+>(c) Use mean value imputation to the missing cases and refit the model comparing to fit found in the previous question.
+
+```{r}
+(means <- colMeans(filled, na.rm=TRUE))
+
+mvi <- pima
+
+for (i in c(1:5)) {
+  vec <- filled[,i]
+  vec[is.na(vec)] <- mean(vec[!is.na(vec)])
+  mvi[,i+1] <- vec
+}
+
+summary(lm2 <- lm(diastolic ~ ., mvi))
+```
+Error is a bit lower, p-value is considerably lower, and now glucose and diabetes play a bigger role in the result!
+
+>(d) Use regression-based imputation using the other four geographic predictors to fill in the missing values in the data.  Fit the same model and compare to previous fits.
+
+```{r}
+lm3 <- lm(glucose ~ diabetes + age + test + pregnant, pima)
+```
+
+The book offers two methods for this.... The first is a normal linear regression.
+
+```{r}
+pima[is.na(pima$glucose),]
+predict(lm3, pima[is.na(pima$glucose),])
+```
+
+The other method is by logit transformation.
+
+```{r}
+lm4 <- lm(logit(glucose/100) ~ diabetes + age + test + pregnant, pima)
+ilogit(predict(lm4, pima[is.na(pima$glucose),]))*100
+```
+Both seem pretty bad to me.
+
+>(e) Use multiple imputation to handle missing values and fit the same model again.  Compare to previous fits.
+
+```{r}
+set.seed(1337)
+pima_imp <- amelia(pima, m = 25)
+
+betas <- NULL
+ses <- NULL
+
+for (i in 1:pima_imp$m) {
+  lmod <- lm (diastolic ~ diabetes + age + test + pregnant, pima_imp$imputations[[i]])
+  betas <- rbind(betas, coef(lmod))
+  ses <- rbind(ses, coef(summary(lmod))[,2])
+}
+```
+
+```{r}
+(cr <- mi.meld(q=betas,se=ses))
+```
+
+```{r}
+# t-statistics
+cr$q.mi/cr$se.mi
+```
+
+I'm really not sure how to use these functions.

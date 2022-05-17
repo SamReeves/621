@@ -1,0 +1,576 @@
+<html class=" egwntkuhb idc0_339"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>Model Evaluation</title>
+<script type="text/javascript" async="" src="Model%20Evaluation_files/ga.js"></script><script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-20171535-2']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+
+<style>
+#carbonads {
+  position: fixed;
+  top: 40px;
+  display: block;
+  overflow: hidden;
+  padding: 1em;
+  max-width: 130px;
+  border: solid 1px hsl(0, 0%, 94%);
+  background-color: hsl(0, 0%, 98%);
+  text-align: center;
+  font-size: 12px;
+  font-family: Verdana, "Helvetica Neue", Helvetica, sans-serif;
+  line-height: 1.5;
+}
+
+#carbonads a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#carbonads a:hover {
+  color: inherit;
+}
+
+#carbonads span {
+  display: block;
+  overflow: hidden;
+}
+
+.carbon-img {
+  display: block;
+  margin: 0 auto 1em;
+}
+
+.carbon-text {
+  display: block;
+  margin-bottom: 1em;
+}
+
+.carbon-poweredby {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 9px;
+  line-height: 1;
+}
+</style>
+
+</head>
+
+<body>
+
+<table width="925" height="232" border="0">
+  <tbody><tr>
+    <td height="21"><a href="http://www.saedsayad.com/data_mining_map.htm"><font face="Calibri">Map</font></a><font face="Calibri">
+      &gt; <a href="http://www.saedsayad.com/problem_definition.htm"> Problem Definition</a>  &gt; <a href="http://www.saedsayad.com/data_preparation.htm">Data
+      Preparation</a>  &gt; <a href="http://www.saedsayad.com/data_exploration.htm">Data Exploration</a>
+      &gt; <a href="http://www.saedsayad.com/modeling.htm">Modeling</a>  &gt; <a href="http://www.saedsayad.com/model_evaluation.htm"> Evaluation</a> &gt; <a href="http://www.saedsayad.com/model_deployment.htm">Deployment</a></font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21">
+    <script async="" type="text/javascript" src="Model%20Evaluation_files/carbon.js" id="_carbonads_js"></script>
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <font face="Calibri" color="#008000">&nbsp;</font>
+    </td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="25">
+      <h3 align="center"><font face="Calibri" color="#008000">Model Evaluation -
+      Classification</font></h3>
+    </td>
+    <td width="50" height="25">
+    </td>
+    <td width="100" height="25">
+    </td>
+  </tr>
+  <tr>
+    <td height="13"></td>
+    <td width="50" height="13"></td>
+    <td width="100" height="13"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <h3><font face="Calibri">Confusion Matrix</font></h3>
+    </td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="left"><font face="Calibri">A confusion matrix shows the number of correct and incorrect predictions made by
+      the classification model compared to the actual outcomes (target value) in the data. The matrix is
+      </font><i>N</i><font face="Calibri">x</font><i>N</i><font face="Calibri">, where
+      </font><i>N</i><font face="Calibri"> is the number of target 
+values (classes). Performance of such models is commonly evaluated using
+ the data in the matrix. The following table displays a 2x2 confusion 
+matrix for two classes
+      (Positive and Negative).</font></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21" align="center"><font face="Calibri">&nbsp;</font></td>
+    <td width="50" height="21" align="center"></td>
+    <td width="100" height="21" align="center"></td>
+  </tr>
+  <tr>
+    <td height="105" align="center">
+      <table bordercolorlight="#C0C0C0" bordercolordark="#FFFFFF" width="620" cellspacing="0" bordercolor="#C0C0C0" border="1">
+        <tbody><tr>
+          <td colspan="2" rowspan="2" width="170" align="center"><font face="Calibri">Confusion Matrix</font></td>
+          <td colspan="2" width="191" bgcolor="#E3EBF2" align="center"><font face="Calibri"><b>Target</b></font></td>
+          <td colspan="2" rowspan="2" width="241" align="center">&nbsp;</td>
+        </tr>
+        <tr>
+          <td width="92" bgcolor="#E3EBF2" align="center"><font face="Calibri">Positive</font></td>
+          <td width="95" bgcolor="#E3EBF2" align="center"><font face="Calibri">Negative</font></td>
+        </tr>
+        <tr>
+          <td rowspan="2" width="94" bgcolor="#E3EBF2" align="center"><font face="Calibri"><b>Model</b></font></td>
+          <td width="72" bgcolor="#E3EBF2" align="center"><font face="Calibri">Positive</font></td>
+          <td width="92" align="center"><font face="Calibri">a</font></td>
+          <td width="95" align="center"><font face="Calibri">b</font></td>
+          <td width="181" bgcolor="#FFFFCC" align="center">
+            <p align="left"><font face="Calibri"><i>Positive Predictive Value</i></font></p></td>
+          <td width="60" bgcolor="#FFFFCC" align="center"><font face="Calibri">a/(a+b)</font></td>
+        </tr>
+        <tr>
+          <td width="72" bgcolor="#E3EBF2" align="center"><font face="Calibri">Negative</font></td>
+          <td width="92" align="center"><font face="Calibri">c</font></td>
+          <td width="95" align="center"><font face="Calibri">d</font></td>
+          <td width="181" bgcolor="#FFFFCC" align="center">
+            <p align="left"><font face="Calibri"><i>Negative Predictive Value</i></font></p></td>
+          <td width="60" bgcolor="#FFFFCC" align="center"><font face="Calibri">d/(c+d)</font></td>
+        </tr>
+        <tr>
+          <td colspan="2" rowspan="2" width="166" align="center">&nbsp;</td>
+          <td width="92" bgcolor="#FFFFCC" align="center"><font face="Calibri"><i>Sensitivity</i></font></td>
+          <td width="95" bgcolor="#FFFFCC" align="center"><font face="Calibri"><i>Specificity</i></font></td>
+          <td colspan="2" rowspan="2" width="241" align="center">
+            <p align="center"><font face="Calibri"><b>Accuracy</b> = (a+d)/(a+b+c+d)</font></p></td>
+        </tr>
+        <tr>
+          <td width="92" bgcolor="#FFFFCC" align="center"><font face="Calibri">a/(a+c)</font></td>
+          <td width="95" bgcolor="#FFFFCC" align="center"><font face="Calibri">d/(b+d)</font></td>
+        </tr>
+      </tbody></table>
+    </td>
+    <td width="50" height="105" align="center">
+    </td>
+    <td width="100" height="105" align="center">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <ul>
+        <li><font face="Calibri"><b>Accuracy </b>: the proportion of the total number of predictions that were correct.</font></li>
+        <li><font face="Calibri"><b>Positive Predictive Value</b> or <b>Precision
+          </b>: the proportion of positive cases that were correctly identified.</font></li>
+        <li><font face="Calibri"><b>Negative </b><b>Predictive Value</b> : the proportion of
+          negative cases that were correctly identified.</font></li>
+        <li><font face="Calibri"><b>Sensitivity</b> or <b>Recall </b>: the proportion of actual
+          positive cases which are correctly identified.&nbsp;</font></li>
+        <li><font face="Calibri"><b>Specificity </b>: the proportion of actual
+          negative cases which are correctly identified.&nbsp;</font></li>
+      </ul>
+    </td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"><i>Example</i>:</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21" align="center">
+      <table bordercolorlight="#C0C0C0" bordercolordark="#FFFFFF" width="620" cellspacing="0" bordercolor="#C0C0C0" border="1">
+        <tbody><tr>
+          <td colspan="2" rowspan="2" width="170" align="center"><font face="Calibri">Confusion Matrix</font></td>
+          <td colspan="2" width="191" bgcolor="#E3EBF2" align="center"><font face="Calibri"><b>Target</b></font></td>
+          <td colspan="2" rowspan="2" width="241" align="center">&nbsp;</td>
+        </tr>
+        <tr>
+          <td width="92" bgcolor="#E3EBF2" align="center"><font face="Calibri">Positive</font></td>
+          <td width="95" bgcolor="#E3EBF2" align="center"><font face="Calibri">Negative</font></td>
+        </tr>
+        <tr>
+          <td rowspan="2" width="94" bgcolor="#E3EBF2" align="center"><font face="Calibri"><b>Model</b></font></td>
+          <td width="72" bgcolor="#E3EBF2" align="center"><font face="Calibri">Positive</font></td>
+          <td width="92" align="center"><font face="Calibri">70</font></td>
+          <td width="95" align="center"><font face="Calibri">20</font></td>
+          <td width="181" bgcolor="#FFFFCC" align="center">
+            <p align="left"><font face="Calibri"><i>Positive Predictive Value</i></font></p></td>
+          <td width="60" bgcolor="#FFFFCC" align="center"><font face="Calibri">0.78</font></td>
+        </tr>
+        <tr>
+          <td width="72" bgcolor="#E3EBF2" align="center"><font face="Calibri">Negative</font></td>
+          <td width="92" align="center"><font face="Calibri">30</font></td>
+          <td width="95" align="center"><font face="Calibri">80</font></td>
+          <td width="181" bgcolor="#FFFFCC" align="center">
+            <p align="left"><font face="Calibri"><i>Negative Predictive Value</i></font></p></td>
+          <td width="60" bgcolor="#FFFFCC" align="center"><font face="Calibri">0.73</font></td>
+        </tr>
+        <tr>
+          <td colspan="2" rowspan="2" width="166" align="center">&nbsp;</td>
+          <td width="92" bgcolor="#FFFFCC" align="center"><font face="Calibri"><i>Sensitivity</i></font></td>
+          <td width="95" bgcolor="#FFFFCC" align="center"><font face="Calibri"><i>Specificity</i></font></td>
+          <td colspan="2" rowspan="2" width="241" align="center">
+            <p align="center"><font face="Calibri"><b>Accuracy</b> = 0.75</font></p></td>
+        </tr>
+        <tr>
+          <td width="92" bgcolor="#FFFFCC" align="center"><font face="Calibri">0.70</font></td>
+          <td width="95" bgcolor="#FFFFCC" align="center"><font face="Calibri">0.80</font></td>
+        </tr>
+      </tbody></table>
+      &nbsp;</td>
+    <td width="50" height="21" align="center">
+    </td>
+    <td width="100" height="21" align="center">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <h3><font face="Calibri">Gain and Lift Charts</font></h3>
+    </td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri">Gain or lift is a measure of the effectiveness of a
+      classification model calculated as the ratio between the results obtained with and without the model.
+      Gain and lift charts are visual aids for evaluating performance of
+      classification models. However, in contrast to the confusion matrix that
+      evaluates models on the whole population gain or lift chart evaluates
+      model performance in a portion of the population.&nbsp;</font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Gain_chart.png" width="413" height="239" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"><i>Example:</i></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="left"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Gain_chart_1.png" width="672" height="286" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri"><b>&nbsp;</b></font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><font face="Calibri"><b>Gain Chart</b></font></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Chart_Gain_3.png" width="487" height="338" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri"><b>&nbsp;</b></font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri"><b>Lift Chart</b></font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="left"><font face="Calibri">The lift chart shows how much
+ more likely we are to receive
+      positive responses than if we contact a random sample of 
+customers. For example, by contacting only 10% of customers based on the
+ predictive model we will reach 3 times as
+      many respondents, as if we use no model.</font></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Chart_lift.png" width="459" height="277" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <h3><font face="Calibri">K-S Chart&nbsp;</font></h3>
+    </td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri">K-S or Kolmogorov-Smirnov chart
+      measures performance of classification models. More accurately, K-S is a measure of the degree of
+      separation between the positive and negative distributions. The K-S is 100
+      if the scores partition the population into
+      two separate groups in which one group contains all the positives and the other all the
+      negatives. On the other hand, If the model cannot differentiate between
+      positives and negatives, then it is as if the model selects cases randomly from the population. The K-S would be 0.
+      In most classification models the K-S will fall between 0 and 100, and that the higher the value the better the
+      model is at separating the positive from negative cases.</font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"><i>Example:</i></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri">The following example shows the results
+      from a classification model. The model assigns a score between 0-1000 to
+      each positive (Target) and negative (Non-Target) outcome.&nbsp;</font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Chart_KS.png" width="499" height="318" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Chart_KS_1.png" width="489" height="286" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <h3><font face="Calibri">ROC Chart</font></h3>
+    </td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <font face="Calibri">The ROC chart is similar to the gain or lift 
+charts
+      in that they provide a means of comparison between classification 
+models. The ROC
+      chart shows false positive rate (1-specificity) on X-axis, the 
+probability of
+      target=1 when its true value is 0, against true positive rate 
+(sensitivity)
+      on Y-axis, the probability of target=1 when its true value is 1. 
+Ideally, the curve will climb quickly toward the top-left meaning the
+      model correctly predicted the cases. The diagonal red line is for a
+ random
+      model (<a href="http://www.saedsayad.com/further_readings.htm" target="_blank">ROC101</a>).</font></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Chart_ROC.png" width="448" height="280" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri"><b>Area Under the Curve (AUC)</b></font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri">Area under ROC curve is often used as a measure of quality of
+      the classification models. A random classifier has an area under the curve of 0.5,
+      while AUC for a perfect classifier is equal to 1. In practice, most of the
+      classification models have an AUC between 0.5 and 1.</font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">
+      <p align="center"><img src="Model%20Evaluation_files/Chart_AUC_2.png" width="471" height="295" border="0"></p></td>
+    <td width="50" height="21">
+    </td>
+    <td width="100" height="21">
+    </td>
+  </tr>
+  <tr>
+    <td height="21"><font face="Calibri">An area under the ROC curve of 
+0.8, for example, means that a randomly selected case from the group 
+with
+      the target equals 1 has a score larger than that for a randomly 
+chosen case from the group
+      with the target equals 0 in 80% of the time. When a classifier 
+cannot distinguish between the two
+      groups, the area will be equal to 0.5 (the ROC curve will coincide
+ with the diagonal). When there is a perfect separation of
+      the two groups, i.e., no overlapping of the distributions, the 
+area under the ROC curve
+      reaches to 1 (the ROC curve will reach the upper left corner of 
+the plot).
+      </font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21">&nbsp;</td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="26"><img src="Model%20Evaluation_files/flash16c.png" width="16" height="16" border="0">
+      <font face="Calibri"><a href="http://www.saedsayad.com/flash/CM.html" target="_blank">Confusion
+      Matrix Interactive</a></font></td>
+    <td width="50" height="26"></td>
+    <td width="100" height="26"></td>
+  </tr>
+  <tr>
+    <td height="21"><img src="Model%20Evaluation_files/flash16c.png" width="16" height="16" border="0">
+      <font face="Calibri"><a href="http://www.saedsayad.com/flash/RocGainKS.html" target="_blank">Gain,
+      ROC and K-S Charts Interactive</a></font></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+  <tr>
+    <td height="21"></td>
+    <td width="50" height="21"></td>
+    <td width="100" height="21"></td>
+  </tr>
+</tbody></table>
+
+
+
+
+</body></html>

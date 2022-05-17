@@ -1,0 +1,194 @@
+---
+title: "HW2"
+author: "Sam Reeves"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(pROC)
+```
+
+### 1. Load the dataset.
+
+```{r}
+df <- read.csv('classification-output-data.csv')
+```
+
+
+### 2. Use the table() function to get the raw confusion matrix for this scored dataset.  What does it represent?
+
+```{r}
+table(df$scored.class, df$class)
+```
+Here the upper left are true negative predictions, the bottom right are true positives.  The rows are predicted values, and the columns are real.
+
+### 3. Write a function that takes a data set as a dataframe, with actual and predicted values, and returns the accuracy.
+
+```{r}
+return.accuracy <- function(df) {
+  conf <- table(df$scored.class, df$class)
+  
+  neg.t <- conf[1,1]
+  neg.f <- conf[1,2]
+  pos.t <- conf[2,2]
+  pos.f <- conf[2,1]
+  
+  accuracy <- (pos.t + neg.t) / (pos.t + pos.f + neg.t + neg.f)
+  return(accuracy)
+}
+
+```
+
+### 4. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the classification error rate of the predictions.
+
+```{r}
+return.error <- function(df) {
+  conf <- table(df$scored.class, df$class)
+  
+  neg.t <- conf[1,1]
+  neg.f <- conf[1,2]
+  pos.t <- conf[2,2]
+  pos.f <- conf[2,1]
+  
+  error <- (pos.f + neg.f) / (pos.t + pos.f + neg.t + neg.f)
+  return(error)
+}
+```
+
+### 5. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the precision of the predictions.
+
+```{r}
+return.precision <- function(df) {
+  conf <- table(df$scored.class, df$class)
+  
+  neg.t <- conf[1,1]
+  neg.f <- conf[1,2]
+  pos.t <- conf[2,2]
+  pos.f <- conf[2,1]
+  
+  precision <- (pos.t) / (pos.t + pos.f)
+  return(precision)
+}
+```
+
+### 6. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the sensitivity of the predictions. Sensitivity is also known as recall.
+
+```{r}
+return.recall <- function(df) {
+  conf <- table(df$scored.class, df$class)
+  
+  neg.t <- conf[1,1]
+  neg.f <- conf[1,2]
+  pos.t <- conf[2,2]
+  pos.f <- conf[2,1]
+  
+  recall <- (pos.t) / (pos.t + neg.f)
+  return(recall)
+}
+```
+
+
+### 7. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the specificity of the predictions.
+
+```{r}
+return.specificity <- function(df) {
+  conf <- table(df$scored.class, df$class)
+  
+  neg.t <- conf[1,1]
+  neg.f <- conf[1,2]
+  pos.t <- conf[2,2]
+  pos.f <- conf[2,1]
+  
+  specificity <- (neg.t) / (pos.f + neg.t)
+  return(specificity)
+}
+```
+
+### 8. Write a function that takes the data set as a dataframe, with actual and predicted classifications identified, and returns the F1 score of the predictions.
+
+```{r}
+return.f1 <- function(df = df) {
+  prec <- return.precision(df)
+  sens <- return.recall(df)
+  
+  f1 <- (2 * prec * sens) / (prec + sens)
+  return(f1)
+}
+```
+
+```{r}
+return.f1(df)
+```
+
+
+### 9. What are the bounds on the F1 score? Show that the F1 score will always be between 0 and 1.
+
+The numerator will always be smaller than the denominator, except in the case where the numerator is 2.  Always.  These to complimentary fractions precision and sensitivity multiplied together with 2 will always be smaller than the two values added together.
+
+So, this value cannot exceed 1 or become negative.  These are the limits, the maximum is $\frac{2}{1}$ and minimum is $\frac{2}{\infty}$.
+
+### 10. Write a function that generates an roc curve from a data set with a true classification column (class in our example) and a probability column (scored.probability in our example). Your function should return a list that includes the plot of the roc curve and a vector that contains the calculated area under the curve (AUC). Note that I recommend using a sequence of thresholds ranging from 0 to 1 at 0.01 intervals.
+
+```{r}
+return.rocd <- function(df) {
+  class <- df$class
+  prob <- round(df$scored.probability, 2)
+    
+  rocd <- data.frame(table(class, prob))
+  
+  rocd <- reshape(rocd, timevar = 'class',
+                      idvar = 'prob', direction = 'wide')
+  
+  rocd$spec <- cumsum(rocd$Freq.0) / sum(rocd$Freq.0)
+  rocd$sens <- cumsum(rocd$Freq.1) / sum(rocd$Freq.1)
+  
+  fig <- plot(1 - rocd$spec, 1 - rocd$sens, type = 'l')
+
+  rocd$x <- 0
+  rocd$y <- 0
+  rocd$auc <- 0
+  rocd$`1 - spec` <- 1 - rocd$spec
+  
+  for(i in 1:(dim(rocd)[1]-1)) {
+    rocd$x[i] <- abs(rocd$`1 - spec`[i+1] - rocd$`1 - spec`[i])
+    rocd$y[i] <- abs(rocd$sens[i+1] - rocd$sens[i])
+    rocd$auc[i] <- rocd$x[i] * (rocd$sens[i] + rocd$sens[i+1]) / 2
+  }
+  
+  auc <- sum(rocd$auc)
+  return(list(rocd, fig, auc))
+}
+```
+
+
+### 11. Use your created R functions and the provided classification output data set to produce all of the classification metrics discussed above.
+
+```{r}
+return.accuracy(df)
+return.error(df)
+return.precision(df)
+return.recall(df)
+return.specificity(df)
+return.f1(df)
+return.rocd(df)
+```
+
+### 12. Investigate the caret package. In particular, consider the functions confusionMatrix, sensitivity, and specificity. Apply the functions to the data set. How do the results compare with your own functions?
+
+```{r}
+confusionMatrix(data = as.factor(df$scored.class), 
+                reference = as.factor(df$class))
+```
+Holy cow! They're the same!
+
+### 13. Investigate the procd package. Use it to generate an rocd curve for the data set. How do the results compare with your own functions?
+
+```{r}
+d <- return.rocd(df)[[1]]
+
+plot(roc(response = df$class,
+    predictor = df$scored.class))
+```
+I'm confused about this error.  I think my function is correct, though.

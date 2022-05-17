@@ -1,0 +1,246 @@
+---
+title: "Moneyball"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, include = FALSE)
+```
+
+We are about to recreate the famous moneyball model.
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE, results=FALSE}
+library(tidyverse)
+library(mice)
+library(pROC)
+library(corrplot)
+
+set.seed(1337)
+
+tr <- read.csv("moneyball-training-data.csv")
+ev <- read.csv("moneyball-evaluation-data.csv")
+
+imp <- c(7, 8, 9, 10, 14, 16)
+```
+
+![]("vars.png")
+
+# DATA EXPLORATION and PREPARATION
+
+### Missing information
+
+```{r}
+as.binMat <- function(df) {
+  m <- c()
+  for (i in colnames(df)) {
+    x <- sum(is.na(df[,i]))
+    m <- append(m, x)
+    m <- append(m, nrow(df) - x)
+  }
+  
+  a <- matrix(m, nrow = 2)
+  rownames(a) <- c("Missing", "Present")
+  colnames(a) <- colnames(df)
+  
+  return(a)
+}
+
+tr.binmat <- as.binMat(tr)
+ev.binmat <- as.binMat(ev)
+```
+
+
+```{r, include = TRUE}
+barplot(tr.binmat[,imp+1], main = "Missing information, training set",
+        xlab = "Frequency")
+colSums(is.na(tr))
+barplot(ev.binmat[,imp], main = "Missing information, evaluation set",
+        xlab = "Frequency")
+colSums(is.na(ev))
+
+```
+TEAM_BATTING_HBP is missing almost every value, so we may have to destroy this variable.  For now we will add a flag and impute the values... After the other things are filled.  This variable represents batters hit by a pitch, and none of the values are zero, so these are truly missing.
+
+The main question for this dataset, is whether or not imputing this huge missing column will help or hurt the models.
+
+```{r, include=TRUE}
+hist(tr$TEAM_BATTING_HBP)
+```
+
+Apart from that, TEAM_BASERUN_CS is missing about a third of its values, and it seems like a good idea to look at the distribution of known values and add a flag for it, too. This is players caught stealing bases.  This information also makes sense.  This appears to be a skewed normal distribution ranging from zero off near 200.  A good candidate for imputation.
+
+```{r, include=TRUE}
+hist(tr$TEAM_BASERUN_CS)
+```
+
+The other variables have relatively low amounts of missing data. These two exhibit very cooperative distributions, and we will impute around them.
+
+The distributions in the training and evaluation sets are nearly identical, so we cn make a generic function for this.
+
+### Munging
+
+Our data munging process mostly just deals with adding flags for missing information and imputing these points based on normal distributions.  The information presented is 100% numeric, all integers, so we don't have to transform it much.  
+
+We will start by imputing the data in the training set alone because it contains the target variable.  Then we impute the data from the evaluation set using the filled training set.
+
+```{r}
+tr <- tr %>%
+  select(-INDEX) %>%
+  mutate(HBP = is.na(TEAM_BATTING_HBP)) %>%
+  mutate(BSO = is.na(TEAM_BATTING_SO)) %>%
+  mutate(PSO = is.na(TEAM_PITCHING_SO)) %>%
+  mutate(DP = is.na(TEAM_FIELDING_DP)) %>%
+  mutate(SB = is.na(TEAM_BASERUN_SB)) %>%
+  mutate(CS = is.na(TEAM_BASERUN_CS)) %>%
+  as.matrix()
+
+x <- mice(tr, maxit = 20)
+y <- complete(x, 1)
+tr.imp <- cbind(tr[,-imp], y[,imp])
+```
+
+```{r}
+ev <- ev %>%
+  select(-INDEX) %>%
+  mutate(HBP = is.na(TEAM_BATTING_HBP)) %>%
+  mutate(BSO = is.na(TEAM_BATTING_SO)) %>%
+  mutate(PSO = is.na(TEAM_PITCHING_SO)) %>%
+  mutate(DP = is.na(TEAM_FIELDING_DP)) %>%
+  mutate(SB = is.na(TEAM_BASERUN_SB)) %>%
+  mutate(CS = is.na(TEAM_BASERUN_CS)) %>%
+  as.matrix()
+
+
+f <- mice(ev, maxit = 20, method = "norm.predict")
+g <- complete(f, 1)
+ev.imp <- cbind(ev[,-imp], g[,imp])
+```
+
+```{r}
+colSums(is.na(ev.imp))
+```
+
+
+
+### Correlations
+
+```{r, include = TRUE, fig.height=6}
+corrplot(cor(ev.imp),
+         type = 'upper',
+         tl.col = 'black',
+         tl.cex = 0.5)
+```
+
+This is a little bit scary.  Not a single one of the dependent variables is strongly correlated to the target.  There are some interesting pairs, TEAM_PITCHING_HR and TEAM_BATTING_HR and the flags for TEAM_PITCHING_SO and TEAM_BATTING_SO, which could be an artifact of the imputation.  The correlations look pretty complex and full of information.
+
+```{r, include=TRUE}
+ggplot(tr.imp, aes(x = tr[, 1], y = TEAM_BATTING_H)) +
+  geom_point() + ggtitle(label = "Wins vs Hits at bat")
+```
+Batting hits is the only datapoint that correlates noticeably with wins.  There is a lot more to the story.
+
+### Some key distributions
+
+Of the most correlated and anticorrelated, here is a selection:
+
+```{r, include=TRUE}
+ggplot(tr.imp, aes(x = TEAM_BATTING_SO, y = TEAM_BATTING_3B)) +
+  geom_point() + ggtitle("Batting strikeouts vs batting triples")
+```
+It makes a lot of sense that strikeouts and triples would be anticorrelated.  This is good information.  There is changing variance in this relationship, so it may be a good feature.
+
+```{r, include=TRUE}
+ggplot(tr.imp, aes(x = TEAM_FIELDING_E, y = TEAM_FIELDING_DP)) +
+  geom_point() + ggtitle("Fielding errors vs. fielding double plays")
+```
+
+This may be a very strong feature because the relationship between errors and double plays tells a lot about a team's ability to respond to wild hits.
+
+```{r, include=TRUE}
+ggplot(tr.imp, aes(x = TEAM_BATTING_BB, y = TEAM_FIELDING_E)) +
+  geom_point() + ggtitle("Walks by batters vs. Fielding error")
+```
+It makes a lot of sense that teams that walk a lot at bat are also less likely to make fielding errors.  This shows a defensive mentality in some teams, and an offensive one in others.
+
+\clearpage
+
+# BUILD MODELS
+
+We need to split the data for training and test sets internally, since we don't know the target values in the evaluation set.
+
+```{r}
+tr.tr <- tr.imp[1:2000,]
+tr.ev <- tr.imp[2001:2535,]
+```
+
+### The all-in model
+
+```{r, include=TRUE}
+summary(m1 <- lm(TARGET_WINS ~ . -BSO,
+                 tr.tr))
+```
+
+
+### Trimmed feature model
+
+```{r, include=TRUE}
+summary(m2 <- lm(TARGET_WINS ~ . -DP -CS -TEAM_PITCHING_SO 
+                 -TEAM_PITCHING_HR -TEAM_PITCHING_BB -BSO 
+                 -TEAM_BASERUN_CS,
+                 tr.tr))
+```
+
+### Trimmed model with generated features
+
+We add the three new relationships from the data exploration section as features to the trimmed model.
+
+```{r, include=TRUE}
+summary(m3 <- lm(TARGET_WINS ~ . -DP -CS -TEAM_PITCHING_SO 
+                 -TEAM_PITCHING_HR -TEAM_PITCHING_BB -BSO -TEAM_BASERUN_CS
+                 +TEAM_BATTING_BB*TEAM_FIELDING_E,
+                 tr.tr))
+```
+
+\clearpage
+
+# SELECT MODELS
+
+To select our models, we should make predictions on the internal evaluation set, where we know the target values.
+
+```{r}
+p1 <- predict(m1, tr.ev)
+p2 <- predict(m2, tr.ev)
+p3 <- predict(m3, tr.ev)
+```
+
+### Mean squared error
+
+The mean of the square of the difference between real and predicted values.
+
+```{r}
+(mse1 <- mean(m1$residuals^2))
+(mse2 <- mean(m2$residuals^2))
+(mse2 <- mean(m3$residuals^2))
+```
+
+It looks like the trimmed model with added features based on correlations has a slightly lower mean-squared error than the all-in and trimmed models.
+
+### Coefficient of determination
+
+```{r}
+sum(is.na(tr.ev))
+```
+
+
+### F-statistic
+
+### Residuals
+```{r}
+plot(m2)
+```
+
+\clearpage
+
+# EXPORT PREDICTIONS
+
+# CODE APPENDIX

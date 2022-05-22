@@ -1,0 +1,312 @@
+---
+title: "DATA 621 Final"
+subtitle: "Currency Valuation in Myanmar"
+author: "Sam Reeves"
+output: pdf_document
+---
+
+# Exposition
+
+```{r setup, echo=FALSE, results='hide', warning=FALSE, message=FALSE}
+library(zoo)
+library(tidyverse)
+library(MASS)
+library(forecast)
+library(ggplot2)
+
+rates <- read.csv(
+  "https://raw.githubusercontent.com/SamReeves/exchange-rate-prediction/master/rates.csv") %>%
+  na.locf()
+
+colnames(rates)[colnames(rates) == "X"] <- "date"
+rates <- mutate(rates, date = as.Date(date))
+
+rates[598, 2:39] <- rates[597, 2:39]
+
+set.seed(1337)
+```
+
+
+### Question
+
+Is it reasonable to predict the USD/MMK exchange rate using the historical data for all ***/MMK exchange rates?
+
+### Cases 
+
+Prior to the current regime, the Central Bank of Myanmar would declare an exchange rate for each of 38 currencies which could be used to buy Kyats.  For nearly 10 years of data, each day is an observation, and there are 38 variables in each observation which are all numerical exchange rates.
+
+### Data collection 
+
+This data was scraped from the Central Bank of Myanmar's main website.  Since the junta took over, the website has gone offline and this data is no longer available.  There was no formal API, however, by building URL strings it was possible to select data from specific time periods.
+
+# Literature Discussion
+
+The following are some sources which heavily influenced this study.  The excerpts about them are illustrative concepts which form the foundation for my interpretation of the practical results.  Full citations are listed in the appendix, beginning on page 12.
+
+## Monetary Policy and Currency Valuation
+
+> Currency valuation and purchasing power parity. Haidar, 2011.
+
+  Indices du jour, such as the Big Mac Index -- the local price of a McDonald's Big Mac -- are useless here.  There is no McDonald's in Myanmar, and the lifestyle there has been so secluded for so long, there is probably no basket of goods you could realistically use to establish purchasing power across all use cases of cash.
+
+> Real exchange rate appreciation, resource boom, and policy reform in Myanmar. Kubo, 2013.
+
+  Over the six-year period 2006-2011, the real exchange rate of the Myanmar kyat appreciated 200 per cent, resulting in the value of the US dollar in Myanmar falling to one-third of its pre-2006 level. While the resource boom is suspected to be the source of the real exchange rate appreciation, administrative controls on foreign exchange and imports had much more impact. Foreign exchange controls limited the convertibility of the kyat to foreign currencies and spurred negotiated transactions of foreign exchange outside the banking sector, hampering the foreign exchange market interventions of the government and Central Bank.
+
+> The influence of imports, foreign exchange reserves, external debt, and interest rates on the currency exchange rates against the United States Dollar in Southeast Asia Countries Nurjanah, Rahma, and Candra Mustika, 2021.
+
+  From the abstract: "From 2010 to 2017, the currency exchange rates against the USD in SEA (Southeast Asia) countries tended to depreciate.  Foreign exchange reserves negatively affect foreign debt, and imports positively affect countries' exchange rates in the SEA region against the dollar."
+
+> Validating a model of currency valuation. Thavikulwat, 2000.
+
+  These researchers set up a trading game to simulate currency valuation among 116 graduate students who were each given a fixed amount of mock foreign currency at the beginning of the game.  They found that short term patterns were nearly non-existent and that normal monetary policy basically dictated the valuations, as had been observed in the real world.
+  
+> Optimal currency baskets and the third currency phenomenon: Exchange rate policy in Southeast Asia. Bird and Rajan, 2002.
+
+  This paper examines the interests of developing nations to "steer clear of exchange rate regimes that lie anywhere between the two extremes or 'corner solutions' of credibly fixed or flexible arrangements."  They attempt to ask the question of whether or not nations in SEA (though Myanmar is not included -- it was very difficult to get credible information at this time) committed a blunder by pegging to USD.  They decided that currency boards were inadeqaute and that the USD peg was sub-optimal, preferring a balanced basket approach.
+
+> Exchange Rate Policy Options for Post-crisis Southeast Asia: Is There a Case for Currency Baskets? Rajan, 2002
+
+  In this paper from the same year, Rajan decides that currency baskets are the most appropriate of the nine currency regimes he identifies.  These ideas are compelling.
+  
+> Honey, I Shrunk the Currency Union Effect on Trade.  Nitsch, 2002.
+
+  According to Nitsch, one of the puzzles in empirical international trade is the difficulty of finding a large and statistically significant negative effect of exchange rate variability on trade.  Surely this huge source of uncertainty and currency risk is one of the greatest barriers to world economic integration.
+  
+  He responds to Rose's idea that regional currency unions or dollarization can have "an explosive" effect on bilateral or small-group multilateral trade.  He shows that accounting for missing data, correcting errors in the initial data, and disaggregating the data by currency union reduces this effect to noise.
+
+> Honey, the currency union effect on trade hasn't blown up.  Rose, 2002.
+
+  Rose writes back, acknowledging his needed corrections.  He also recognizes a few other points by Nitsch which are relevant here.  He says there are very few observations for country-pairs in real currency unions, trade and control data are missing or incompatible, and any extrapolations onto other countries are flatly ridiculous.  Rose will still not abandon his position, ending with, "The mystery continues."  Frankly, suspicious.
+  
+## Corruption
+
+> Burmese junta gets US$10M out of UN; Skimming Aid. The Financial Post, Canada, 2008.
+
+  The United Nations has admitted $10 million of aid intended for Burmese cyclone survivors has been skimmed off by banks run by the country's military.  More recently, much much larger sums have been lost in this way by the UN, including as much as \$150 million in aid given to the previous democratic regime just before the junta declared a state of military law.
+
+
+> Everything is Broken: The Untold Story of Disaster Under Burma's Military Regime. Larkin, Emma, 2010.
+
+> No Bad News for the King: The True Story of Cyclone Nargis and its Aftermath in Burma. Larkin, Emma, 2011.
+
+  During Hurricane Nargis, all aid was refused.  Even a French plane loaded with supplies was not allowed to refuel before being forced back into the sky.  For decades, under the rule of Generals Ne Win and Tan Shwe, education and healthcare were illegal, and ethnic non-Burmese could have their assets seized at any time.  Conditions have nearly returned to this state under General Min Aung Hlaing.
+
+## Forecasting
+
+> Bayesian Forecasting of Multivariate Time Series: Scalability, Structure Uncertainty and Decisions. West, 2020.
+
+  This author expounds on the use of dynamic dependency models that can enhance traditional methods of timeseries methods by allowing a 'decoupling/recoupling' process among different preceeding values across different prediction or association horizons.  This seems like a great way to model timeseries data, which may have constantly shifting relationships with seasonal trends of different periods.  We employ some of these ideas to a very elementary degree.
+  
+\break
+
+# Model Generation
+
+First, we rebuild the data set with padding so that the y versus x values represent the desired prediction horizon for each.  Then, we perform a 70:30 train/test split, and preserve the row numbers of the random samples.  For each horizon -- 7, 14, and 60 days, respectively -- we train a new model on all variables using stepwise selection.  We can try to interpret the model residuals or QQ plots, and we can make predictions using each of the tests sets we marked.
+
+```{r, results='hide', echo=TRUE}
+forecast.horizon <- function(days = 1, input = rates) {
+  x <- input[1:(nrow(input)-days), 2:39]
+  return(mutate(x, y = input[(days+1):nrow(input), "USD"]))
+}
+
+data.split <- function(data, ratio = 0.7) {
+  n <- round(nrow(data) * ratio)
+  train <- sample(1:nrow(data), n)
+  test <- setdiff(1:nrow(data), train)
+  return(list(data[train,], data[test,]))
+}
+
+train.glm <- function(data, horizon) {
+  df <- forecast.horizon(days = horizon, input = data)
+  spl <- data.split(df, ratio = 0.7)
+  model.glm <- stepAIC(glm(formula = y ~ .,
+                           data = spl[[1]],
+                           family = 'gaussian'))
+  return(list(model.glm, spl[[2]]))
+}
+
+glm7 <- train.glm(rates, 7)
+glm14 <- train.glm(rates, 14)
+glm60 <- train.glm(rates, 60)
+```
+
+```{r echo=FALSE}
+hist(glm7[[1]]$residuals, breaks = 100, xlim = c(-100, 100))
+qqnorm(glm7[[1]]$residuals, ylim = c(-100, 100))
+
+hist(glm14[[1]]$residuals, breaks = 100, xlim = c(-100, 100))
+qqnorm(glm14[[1]]$residuals, ylim = c(-100, 100))
+
+hist(glm60[[1]]$residuals, breaks = 100, xlim = c(-100, 100))
+qqnorm(glm60[[1]]$residuals, ylim = c(-100, 100))
+```
+
+
+# Interpretation of model summaries
+
+Here we introduce three models based on prediction horizons of different values.  The residuals of each model are centered around zero, and normally distributed with standard deviations that all appear lower than the smallest denomination of the currency, fifty kyats.  Shorter predictions, understandably have errors centered more closely around zero, and longer ones exhibit more normal variance.  There's really not a lot left to gain in terms of increasing accuracy of predictions.  How are we predicting timeseries data with historical information?  The typical wisdom suggests this shouldn't work.  What's going on here?
+
+This is not a free-floating currency!  It isn't a monetary or inflationary target either, because the central bank doesn't have enough control over the money supply.  There is a small committee who decides what the value of the kyat is going to be, and they don't make public their method of valuation.  They introduce a small amount of randomness (and dispel many rumors about valuation by astrology) to discourage speculation in the market.  However, a multiple regression model can cut right through, revealing the engineered value.  I expect that the value is pegged to a weighted basket of currencies, and the results support this.  
+
+The coefficients with the greatest predictive power makes sense, they indicate comparatively large holdings of USD, EUR, SGD, THB, RUB, all currencies that are particularly useful for importing goods.  Most nations want to trade only in dollars, however, the Thai, Russian, Japanese, Chinese, and Singapore economies are closely involved with business in the country.  This effectively places Myanmar in a de facto currency union, assuming their biggest trading partners are also holding a similar basket.
+
+Our stepwise models reveal that previous relationships among the 38 currencies can indicate the plans of the Central Bank of Myanmar.  It would make sense that they cannot make huge corrections overnight (well, all the time), and these generalized models are able to pick up on these movements.
+
+\break
+
+# Predicted Values
+
+```{r, echo = FALSE}
+p7 <- predict.glm(glm7[[1]], glm7[[2]])
+p7b <- tibble(p7)
+p7b$r <- names(p7)
+
+p14 <- predict.glm(glm14[[1]], glm14[[2]])
+p14b <- tibble(p14)
+p14b$r <- names(p14)
+
+p60 <- predict.glm(glm60[[1]], glm60[[2]])
+p60b <- tibble(p60)
+p60b$r <- names(p60)
+
+rates$row <- row.names(rates)
+```
+
+```{r, echo = FALSE}
+add.date <- function(row_vector, df) {
+  date.vector <- c()
+  for (i in 1:length(row_vector)) {
+    x <- as.numeric(row_vector[i])
+    date <- df$date[x]
+    date.vector <- c(date.vector, date)
+  }
+  return(as.Date(date.vector))
+}
+
+p7b$d <- add.date(p7b$r, rates)
+p14b$d <- add.date(p14b$r, rates)
+p60b$d <- add.date(p60b$r, rates)
+```
+
+```{r, results = 'asis', echo = FALSE}
+ggplot(rates, aes(x = date)) +
+  geom_point(aes(y = USD)) +
+  geom_point(data = p7b, aes(x = d, y = p7),
+             size = 0.5, color = 'red') +
+  geom_point(data = p14b, aes(x = d, y = p14),
+             size = 0.5, color = 'blue') +
+  geom_point(data = p60b, aes(x = d, y = p60),
+             size = 0.5, color = 'green') +
+  theme_dark()
+```
+
+
+Black dots are plotted first, the true values, and then red, blue, and green are laid on top: 7, 14, and 60 day horizon predictions.
+
+Each of the three models is a stepwise AIC chosen model, and they have slightly different sets of predictors.  They also were trained on different samples, with test sets held back for each.  The accuracy of this model is very interesting.  It appears to be overtrained, functioning closely to the real data.  Predicting rates like these using only their own historical information is generally considered misguided, however, in this special case, the GLM allows us a clear window into the future choices of the Central Bank.
+
+\break
+
+# Appendix: Citations
+
+Bird, Graham, and Ramkishen Rajan. "Optimal currency baskets and the third currency phenomenon: Exchange rate policy in Southeast Asia." Journal of International Development: The Journal of the Development Studies Association 14.8 (2002): 1053-1073.
+
+"Burmese junta gets US$10M out of UN; Skimming Aid" The Financial Post, Canada, 2008.
+
+Haidar, Jamal Ibrahim. "Currency valuation and purchasing power parity." World Economics 12.3 (2011).
+
+Kubo, Koji. "Real exchange rate appreciation, resource boom, and policy reform in M yanmar." Asian‐Pacific Economic Literature 27.1 (2013): 110-126.
+
+Larkin, Emma. No Bad News for the King: The True Story of Cyclone Nargis and Its Aftermath in Burma. Penguin, 2011.
+
+Larkin, Emma. Everything is Broken: The Untold Story of Disaster Under Burma's Military Regime. Granta Books, 2010.
+
+Nurjanah, Rahma, and Candra Mustika. "The influence of imports, foreign exchange reserves, external debt, and interest rates on the currency exchange rates against the United States Dollar in Southeast Asia Countries." Jurnal Perspektif Pembiayaan dan Pembangunan Daerah 9.4 (2021): 365-374.
+
+Rajan, Ramikishen. "Exchange rate policy options for post‐crisis Southeast Asia: is there a case for currency baskets?." World Economy 25.1 (2002): 137-163.
+
+Rose, Andrew K. "Honey, the currency union effect on trade hasn't blown up." The World Economy 25.4 (2002): 475-479.
+
+Thavikulwat, Precha. "Validating a model of currency valuation." Developments in Business Simulation and Experiential Learning: Proceedings of the Annual ABSEL conference. Vol. 27. 2000.
+
+West, Mike. "Bayesian forecasting of multivariate time series: scalability, structure uncertainty and decisions." Annals of the Institute of Statistical Mathematics 72.1 (2020): 1-31.
+
+\break
+
+# Appendix: R Code
+
+```
+library(zoo)
+library(tidyverse)
+library(MASS)
+library(forecast)
+library(ggplot2)
+
+rates <- read.csv(
+  "https://raw.githubusercontent.com/SamReeves/exchange-rate-prediction/master/rates.csv") %>%
+  na.locf()
+
+colnames(rates)[colnames(rates) == "X"] <- "date"
+rates <- mutate(rates, date=as.Date(date[[1]]))
+
+set.seed(1337)
+
+forecast.horizon <- function(days = 1, input = rates) {
+  x <- input[1:(nrow(input)-days), 2:39]
+  return(mutate(x, y = input[(days+1):nrow(input), "USD"]))
+}
+
+data.split <- function(data, ratio = 0.7) {
+  n <- round(nrow(data) * ratio)
+  train <- sample(1:nrow(data), n)
+  test <- setdiff(1:nrow(data), train)
+  return(list(data[train,], data[test,]))
+}
+
+train.glm <- function(data, horizon) {
+  df <- forecast.horizon(days = horizon, input = data)
+  spl <- data.split(df, ratio = 0.7)
+  model.glm <- stepAIC(glm(formula = y ~ .,
+                           data = spl[[1]],
+                           family = 'gaussian'))
+  return(list(model.glm, spl[[2]]))
+}
+
+glm7 <- train.glm(rates, 7)
+glm14 <- train.glm(rates, 14)
+glm60 <- train.glm(rates, 60)
+
+hist(glm7[[1]]$residuals, breaks = 100, xlim = c(-100, 100))
+qqnorm(glm7[[1]]$residuals, ylim = c(-100, 100))
+
+hist(glm14[[1]]$residuals, breaks = 100, xlim = c(-100, 100))
+qqnorm(glm14[[1]]$residuals, ylim = c(-100, 100))
+
+hist(glm60[[1]]$residuals, breaks = 100, xlim = c(-100, 100))
+qqnorm(glm60[[1]]$residuals, ylim = c(-100, 100))
+
+p7 <- predict.glm(glm7[[1]], glm7[[2]])
+p7b <- tibble(p7)
+p7b$r <- names(p7)
+
+p14 <- predict.glm(glm14[[1]], glm14[[2]])
+p14b <- tibble(p14)
+p14b$r <- names(p14)
+
+p60 <- predict.glm(glm60[[1]], glm60[[2]])
+p60b <- tibble(p60)
+p60b$r <- names(p60)
+
+rates$row <- row.names(rates)
+
+ggplot(rates, aes(x = row)) +
+  geom_point(aes(y = USD)) +
+  geom_point(data = p7b, aes(x = r, y = p7),
+             size = 0.5, color = 'red') +
+  geom_point(data = p14b, aes(x = r, y = p14),
+             size = 0.5, color = 'blue') +
+  geom_point(data = p60b, aes(x = r, y = p60),
+             size = 0.5, color = 'green') +
+  theme_dark()
+```

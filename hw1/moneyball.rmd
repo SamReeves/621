@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE, include = FALSE)
 
 We are about to recreate the famous moneyball model.
 
-```{r, message=FALSE, warning=FALSE, echo=FALSE, results=FALSE}
+```{r, message=FALSE, warning=FALSE, echo=FALSE, results='hide'}
 library(tidyverse)
 library(mice)
 library(pROC)
@@ -57,13 +57,12 @@ colSums(is.na(tr))
 barplot(ev.binmat[,imp], main = "Missing information, evaluation set",
         xlab = "Frequency")
 colSums(is.na(ev))
-
 ```
 TEAM_BATTING_HBP is missing almost every value, so we may have to destroy this variable.  For now we will add a flag and impute the values... After the other things are filled.  This variable represents batters hit by a pitch, and none of the values are zero, so these are truly missing.
 
 The main question for this dataset, is whether or not imputing this huge missing column will help or hurt the models.
 
-```{r, include=TRUE}
+```{r, include=FALSE, results='asis'}
 hist(tr$TEAM_BATTING_HBP)
 ```
 
@@ -83,9 +82,8 @@ Our data munging process mostly just deals with adding flags for missing informa
 
 We will start by imputing the data in the training set alone because it contains the target variable.  Then we impute the data from the evaluation set using the filled training set.
 
-```{r}
-tr <- tr %>%
-  select(-INDEX) %>%
+```{r, results='hide'}
+tr <- tr[,-1] %>%
   mutate(HBP = is.na(TEAM_BATTING_HBP)) %>%
   mutate(BSO = is.na(TEAM_BATTING_SO)) %>%
   mutate(PSO = is.na(TEAM_PITCHING_SO)) %>%
@@ -100,8 +98,7 @@ tr.imp <- cbind(tr[,-imp], y[,imp])
 ```
 
 ```{r}
-ev <- ev %>%
-  select(-INDEX) %>%
+ev <- ev[,-1] %>%
   mutate(HBP = is.na(TEAM_BATTING_HBP)) %>%
   mutate(BSO = is.na(TEAM_BATTING_SO)) %>%
   mutate(PSO = is.na(TEAM_PITCHING_SO)) %>%
@@ -119,19 +116,31 @@ ev.imp <- cbind(ev[,-imp], g[,imp])
 ```{r}
 colSums(is.na(ev.imp))
 ```
+```{r}
+ev.imp$TEAM_BATTING_SO[is.na(ev.imp$TEAM_BATTING_SO)] <- mean(tr.imp$TEAM_BATTING_SO)
+ev.imp$TEAM_PITCHING_SO[is.na(ev.imp$TEAM_PITCHING_SO)] <- mean(tr.imp$TEAM_PITCHING_SO)
+ev.imp$TEAM_FIELDING_DP[is.na(ev.imp$TEAM_FIELDING_DP)] <- mean(tr.imp$TEAM_FIELDING_DP)
+
+anyNA(ev.imp)
+```
 
 
 
 ### Correlations
 
 ```{r, include = TRUE, fig.height=6}
-corrplot(cor(ev.imp),
+corrplot(cor(tr),
+         type = 'upper',
+         tl.col = 'black',
+         tl.cex = 0.5)
+
+corrplot(cor(tr.imp),
          type = 'upper',
          tl.col = 'black',
          tl.cex = 0.5)
 ```
 
-This is a little bit scary.  Not a single one of the dependent variables is strongly correlated to the target.  There are some interesting pairs, TEAM_PITCHING_HR and TEAM_BATTING_HR and the flags for TEAM_PITCHING_SO and TEAM_BATTING_SO, which could be an artifact of the imputation.  The correlations look pretty complex and full of information.
+This is a little bit scary.  Not a single one of the dependent variables is strongly correlated to the target.  After imputation, there are some interesting pairs, TEAM_PITCHING_HR and TEAM_BATTING_HR and the flags for TEAM_PITCHING_SO and TEAM_BATTING_SO, which could be an artifact of the imputation.  The correlations look pretty fake and full of bad information.
 
 ```{r, include=TRUE}
 ggplot(tr.imp, aes(x = tr[, 1], y = TEAM_BATTING_H)) +
@@ -220,27 +229,158 @@ The mean of the square of the difference between real and predicted values.
 ```{r}
 (mse1 <- mean(m1$residuals^2))
 (mse2 <- mean(m2$residuals^2))
-(mse2 <- mean(m3$residuals^2))
+(mse3 <- mean(m3$residuals^2))
 ```
 
 It looks like the trimmed model with added features based on correlations has a slightly lower mean-squared error than the all-in and trimmed models.
 
-### Coefficient of determination
-
-```{r}
-sum(is.na(tr.ev))
-```
-
-
-### F-statistic
 
 ### Residuals
-```{r}
-plot(m2)
+```{r, include=TRUE}
+plot(m3)
 ```
 
 \clearpage
 
 # EXPORT PREDICTIONS
 
+```{r, include = TRUE}
+p <- predict.glm(m3, ev.imp)
+write.csv(p, "predictions.csv")
+```
+
+
 # CODE APPENDIX
+
+```
+library(tidyverse)
+library(mice)
+library(pROC)
+library(corrplot)
+
+set.seed(1337)
+
+tr <- read.csv("moneyball-training-data.csv")
+ev <- read.csv("moneyball-evaluation-data.csv")
+
+imp <- c(7, 8, 9, 10, 14, 16)
+
+as.binMat <- function(df) {
+  m <- c()
+  for (i in colnames(df)) {
+    x <- sum(is.na(df[,i]))
+    m <- append(m, x)
+    m <- append(m, nrow(df) - x)
+  }
+  
+  a <- matrix(m, nrow = 2)
+  rownames(a) <- c("Missing", "Present")
+  colnames(a) <- colnames(df)
+  
+  return(a)
+}
+
+tr.binmat <- as.binMat(tr)
+ev.binmat <- as.binMat(ev)
+
+barplot(tr.binmat[,imp+1], main = "Missing information, training set",
+        xlab = "Frequency")
+colSums(is.na(tr))
+barplot(ev.binmat[,imp], main = "Missing information, evaluation set",
+        xlab = "Frequency")
+colSums(is.na(ev))
+
+hist(tr$TEAM_BATTING_HBP)
+hist(tr$TEAM_BASERUN_CS)
+
+tr <- tr[,-1] %>%
+  mutate(HBP = is.na(TEAM_BATTING_HBP)) %>%
+  mutate(BSO = is.na(TEAM_BATTING_SO)) %>%
+  mutate(PSO = is.na(TEAM_PITCHING_SO)) %>%
+  mutate(DP = is.na(TEAM_FIELDING_DP)) %>%
+  mutate(SB = is.na(TEAM_BASERUN_SB)) %>%
+  mutate(CS = is.na(TEAM_BASERUN_CS)) %>%
+  as.matrix()
+
+x <- mice(tr, maxit = 20)
+y <- complete(x, 1)
+tr.imp <- cbind(tr[,-imp], y[,imp])
+
+ev <- ev[,-1] %>%
+  mutate(HBP = is.na(TEAM_BATTING_HBP)) %>%
+  mutate(BSO = is.na(TEAM_BATTING_SO)) %>%
+  mutate(PSO = is.na(TEAM_PITCHING_SO)) %>%
+  mutate(DP = is.na(TEAM_FIELDING_DP)) %>%
+  mutate(SB = is.na(TEAM_BASERUN_SB)) %>%
+  mutate(CS = is.na(TEAM_BASERUN_CS)) %>%
+  as.matrix()
+
+
+f <- mice(ev, maxit = 20, method = "norm.predict")
+g <- complete(f, 1)
+ev.imp <- cbind(ev[,-imp], g[,imp])
+
+colSums(is.na(ev.imp))
+
+ev.imp$TEAM_BATTING_SO[is.na(ev.imp$TEAM_BATTING_SO)] <- mean(tr.imp$TEAM_BATTING_SO)
+ev.imp$TEAM_PITCHING_SO[is.na(ev.imp$TEAM_PITCHING_SO)] <- mean(tr.imp$TEAM_PITCHING_SO)
+ev.imp$TEAM_FIELDING_DP[is.na(ev.imp$TEAM_FIELDING_DP)] <- mean(tr.imp$TEAM_FIELDING_DP)
+
+anyNA(ev.imp)
+
+corrplot(cor(tr),
+         type = 'upper',
+         tl.col = 'black',
+         tl.cex = 0.5)
+
+corrplot(cor(tr.imp),
+         type = 'upper',
+         tl.col = 'black',
+         tl.cex = 0.5)
+         
+ggplot(tr.imp, aes(x = tr[, 1], y = TEAM_BATTING_H)) +
+  geom_point() + ggtitle(label = "Wins vs Hits at bat")
+  
+  ggplot(tr.imp, aes(x = TEAM_BATTING_SO, y = TEAM_BATTING_3B)) +
+  geom_point() + ggtitle("Batting strikeouts vs batting triples")
+  
+  ggplot(tr.imp, aes(x = TEAM_FIELDING_E, y = TEAM_FIELDING_DP)) +
+  geom_point() + ggtitle("Fielding errors vs. fielding double plays")
+  
+  ggplot(tr.imp, aes(x = TEAM_BATTING_BB, y = TEAM_FIELDING_E)) +
+  geom_point() + ggtitle("Walks by batters vs. Fielding error")
+  
+  tr.tr <- tr.imp[1:2000,]
+tr.ev <- tr.imp[2001:2535,]
+
+summary(m1 <- lm(TARGET_WINS ~ . -BSO,
+                 tr.tr))
+                 
+                 summary(m2 <- lm(TARGET_WINS ~ . -DP -CS -TEAM_PITCHING_SO 
+                 -TEAM_PITCHING_HR -TEAM_PITCHING_BB -BSO 
+                 -TEAM_BASERUN_CS,
+                 tr.tr))
+                 
+summary(m2 <- lm(TARGET_WINS ~ . -DP -CS -TEAM_PITCHING_SO 
+                 -TEAM_PITCHING_HR -TEAM_PITCHING_BB -BSO 
+                 -TEAM_BASERUN_CS,
+                 tr.tr))
+                 
+summary(m3 <- lm(TARGET_WINS ~ . -DP -CS -TEAM_PITCHING_SO 
+                 -TEAM_PITCHING_HR -TEAM_PITCHING_BB -BSO -TEAM_BASERUN_CS
+                 +TEAM_BATTING_BB*TEAM_FIELDING_E,
+                 tr.tr))
+
+p1 <- predict(m1, tr.ev)
+p2 <- predict(m2, tr.ev)
+p3 <- predict(m3, tr.ev)
+
+(mse1 <- mean(m1$residuals^2))
+(mse2 <- mean(m2$residuals^2))
+(mse3 <- mean(m3$residuals^2))
+
+plot(m3)
+
+p <- predict.glm(m3, ev.imp)
+write.csv(p, "predictions.csv")
+```

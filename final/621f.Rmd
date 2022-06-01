@@ -1,9 +1,12 @@
 ---
-title: "DATA 621 Final"
-subtitle: "Currency Valuation in Myanmar"
+title: "Currency Valuation in Myanmar"
 author: "Sam Reeves"
 output: pdf_document
 ---
+
+# Abstract
+
+Predicting timeseries data from its own history is a losing maneuver.  For clear theoretical reasons, it shouldn't work.  We identify one example where this method proves very useful and accurate.  Because the Central Bank of Myanmar cannot effectively control its money supply or its balance of imports, it fixes exchange rates in a way that can be revealed by multiple regression models.
 
 # Exposition
 
@@ -33,11 +36,11 @@ Is it reasonable to predict the USD/MMK exchange rate using the historical data 
 
 ### Cases 
 
-Prior to the current regime, the Central Bank of Myanmar would declare an exchange rate for each of 38 currencies which could be used to buy Kyats.  For nearly 10 years of data, each day is an observation, and there are 38 variables in each observation which are all numerical exchange rates.
+The Central Bank of Myanmar declares an exchange rate every morning for each of 38 currencies which can be used to buy Kyats.  For nearly 10 years of data, each day is an observation, and there are 38 variables in each observation which are all numerical exchange rates.
 
 ### Data collection 
 
-This data was scraped from the Central Bank of Myanmar's main website.  Since the junta took over, the website has gone offline and this data is no longer available.  There was no formal API, however, by building URL strings it was possible to select data from specific time periods.
+This data was scraped from the Central Bank of Myanmar's main website.  This dataset is inconsistently available and is subject to change, however, we are sure that we have compiled a dataset which represents real information for its full period.  We saved this data to disk and filled any missing days with the previous day's value.  We make the assumption that trading still happened on days that did not have a new rate.
 
 # Literature Discussion
 
@@ -149,7 +152,7 @@ Here we introduce three models based on prediction horizons of different values.
 
 This is not a free-floating currency!  It isn't a monetary or inflationary target either, because the central bank doesn't have enough control over the money supply.  There is a small committee who decides what the value of the kyat is going to be, and they don't make public their method of valuation.  They introduce a small amount of randomness (and dispel many rumors about valuation by astrology) to discourage speculation in the market.  However, a multiple regression model can cut right through, revealing the engineered value.  I expect that the value is pegged to a weighted basket of currencies, and the results support this.  
 
-The coefficients with the greatest predictive power makes sense, they indicate comparatively large holdings of USD, EUR, SGD, THB, RUB, all currencies that are particularly useful for importing goods.  Most nations want to trade only in dollars, however, the Thai, Russian, Japanese, Chinese, and Singapore economies are closely involved with business in the country.  This effectively places Myanmar in a de facto currency union, assuming their biggest trading partners are also holding a similar basket.
+The coefficients with the greatest predictive power makes sense, they indicate comparatively large holdings of USD, EUR, SGD, THB, RUB, all currencies that are particularly useful for importing goods.  Most nations want to trade only in dollars, however, the Thai, Russian, Japanese, Chinese, and Singapore economies are closely involved with business in the country, however, it probably isn't because of any de facto currency union.
 
 Our stepwise models reveal that previous relationships among the 38 currencies can indicate the plans of the Central Bank of Myanmar.  It would make sense that they cannot make huge corrections overnight (well, all the time), and these generalized models are able to pick up on these movements.
 
